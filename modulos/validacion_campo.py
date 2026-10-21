@@ -354,7 +354,7 @@ def genera_graficos(df_resultados, etiqueta_eje_y="Calculado", etiqueta_eje_x="C
             eje.set_ylabel(etiqueta_eje_y, fontsize=tamano_nombre_ejes)
             eje.tick_params(axis="both", which="major", labelsize=14)
             eje.grid(True, linestyle="--", alpha=0.5)
-            eje.legend(loc="lower right", bbox_to_anchor=(1, 0.025), fontsize=12)
+            eje.legend(loc="lower right", bbox_to_anchor=(1, 0.025), fontsize=12, facecolor="white", framealpha=1.0)
 
             fig.tight_layout()
             figuras_generadas[indice] = fig
@@ -441,7 +441,7 @@ def genera_graficos(df_resultados, etiqueta_eje_y="Calculado", etiqueta_eje_x="C
                 eje.set_ylabel(etiqueta_eje_y, fontsize=tamano_nombre_ejes)
                 eje.tick_params(axis="both", which="major", labelsize=14)
                 eje.grid(True, linestyle="--", alpha=0.5)
-                eje.legend(loc="lower right", fontsize=8)
+                eje.legend(loc="lower right", fontsize=8, facecolor="white", framealpha=1.0)
 
             for j in range(n_fechas, len(axes_comb)):
                 fig_comb.delaxes(axes_comb[j])

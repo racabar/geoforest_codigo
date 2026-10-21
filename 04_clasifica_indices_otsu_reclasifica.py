@@ -1,3 +1,13 @@
+"""
+Script para segmentar y clasificar índices de vegetación mediante el algoritmo
+de Otsu (binario o multiclase) separando vegetación de suelo/fondo.
+
+Exporta los umbrales calculados a CSV y reclasifica opcionalmente los rásteres a formato binario.
+
+Módulos internos utilizados:
+  - modulos.clasifica_imagen_otsu (clasifica_imagen_otsu)
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -80,15 +90,15 @@ def procesar_indices_otsu(ruta_entrada_indices, ruta_salida_otsu, nombre_indice,
 
 
 if __name__ == "__main__":
-    RUTA_BASE = Path(__file__).resolve().parent
-    RUTA_INDICES = RUTA_BASE / "salidas" / "indices"
-    RUTA_CLASIFICACIONES = RUTA_BASE / "salidas" / "segmentaciones"
+    RUTA_BASE = Path("salidas/sin_sombras")
+    RUTA_INDICES = RUTA_BASE / "00_indices"
+    RUTA_CLASIFICACIONES = RUTA_BASE / "03_segmentaciones"
 
-    indice = "tvi2"
-    clases_otsu = 3
+    INDICE = "ndvi"
+    CLASES_OTSU = 2
     banda_procesamiento = 1
 
-    ruta_salida_otsu_final = RUTA_CLASIFICACIONES / f"clasificaciones_otsu_{clases_otsu}c" / indice
+    ruta_salida_otsu_final = RUTA_CLASIFICACIONES / f"{INDICE}_clases_otsu_{CLASES_OTSU}c"
     # Me aseguro de que existe el directorio y si no existe lo creo
     ruta_salida_otsu_final.mkdir(parents=True, exist_ok=True)
 
@@ -96,26 +106,26 @@ if __name__ == "__main__":
     archivos_procesados_3c, datos_umbrales = procesar_indices_otsu(
         ruta_entrada_indices=RUTA_INDICES,
         ruta_salida_otsu=ruta_salida_otsu_final,
-        nombre_indice=indice,
-        num_clases=clases_otsu,
+        nombre_indice=INDICE,
+        num_clases=CLASES_OTSU,
         banda=banda_procesamiento
     )
     
     # Guardo los umbrales en un CSV
     if datos_umbrales:
         df_umbrales = pd.DataFrame(datos_umbrales)
-        ruta_csv_umbrales = ruta_salida_otsu_final / f"umbrales_otsu_{indice}.csv"
+        ruta_csv_umbrales = ruta_salida_otsu_final / f"umbrales_otsu_{INDICE}.csv"
         df_umbrales.to_csv(ruta_csv_umbrales, index=False)
         print(f"\nTabla de umbrales guardada en: {ruta_csv_umbrales}")
     else:
         print("\nNo se ha podido guardar la tabla de umbrales porque no se han generado datos de Otsu.")
 
     # Reclasifico los resultados de Otsu en 2 clases
-    if archivos_procesados_3c and clases_otsu != 2:
+    if archivos_procesados_3c and CLASES_OTSU != 2:
         print("\nIniciando fase de reclasificación binaria...")
         for ruta_3c in archivos_procesados_3c:
             # Nombre del archivo reclasificado
-            nombre_binario = ruta_3c.name.replace(f"_{clases_otsu}c.tif", f"_{clases_otsu}c_binario.tif")
+            nombre_binario = ruta_3c.name.replace(f"_{CLASES_OTSU}c.tif", f"_{CLASES_OTSU}c_binario.tif")
             ruta_binaria = ruta_salida_otsu_final / nombre_binario
             ruta_binaria.parent.mkdir(parents=True, exist_ok=True)
 

@@ -1,3 +1,14 @@
+"""
+Script para calcular índices espectrales de vegetación (NDVI, TriVI, etc.) a partir
+de las bandas multiespectrales capturadas por el sensor UAV (Micasense) para cada
+fecha de vuelo y bloque.
+
+Los rasters resultantes se generan y guardan georreferenciados en EPSG:32630.
+
+Módulos internos utilizados:
+  - modulos.calcula_indices (calcula_indices)
+"""
+
 from datetime import datetime
 from pathlib import Path
 
@@ -8,7 +19,7 @@ hora_inicio = datetime.now().astimezone()
 ruta_base = Path(Path(__file__).resolve().parent)
 
 ruta_bandas = ruta_base / "entradas" / "bandas"
-ruta_indices = ruta_base / "entradas" / "indices"
+ruta_indices = ruta_base / "salidas" / "indices"
 
 indices_a_calcular = ["TriVI"]
 

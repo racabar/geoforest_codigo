@@ -1,3 +1,10 @@
+"""
+Script para comparar la distribución estadística de diferentes índices espectrales
+de vegetación (NDVI, NDRE, OSAVI, MSAVI, MCARI2, TVI2) para distintas fechas de vuelo.
+
+Genera gráficos de densidad apilados (ridgeline plots / KDE) exportados en PNG.
+"""
+
 from datetime import datetime
 from pathlib import Path
 
@@ -10,45 +17,17 @@ import seaborn as sns
 hora_inicio = datetime.now().astimezone()
 print(hora_inicio)
 
+RUTA_BASE = Path("salidas/sin_sombras")
 
-FECHA_INICIO = "2025-05-23"  # "AAAA-MM-DD" o "" 2024-05-16 2025-01-23 2025-05-23
-FECHA_FIN = "2025-05-23"
+FECHAS = ["2024-05-16", "2025-01-23", "2025-05-23"]
 INDICES_PERMITIDOS = ["NDVI", "NDRE", "OSAVI", "MSAVI", "MCARI2"] # Lista de índices: NDVI, TVI2, NDRE, GNDVI, OSAVI, MSAVI, MCARI2, TVI2
 # INDICES_PERMITIDOS = ["TVI2"]
 
+RUTA_INDICES = RUTA_BASE / "00_indices"
 
-def load_indices_sample(ruta_base, indices_dict, n_samples=100000):
-    all_data = []
-
-    # Convierto el string a un objeto Path
-    directory = Path(ruta_base)
-
-    for name, filename in indices_dict.items():
-        file_path = directory / filename
-
-        if not file_path.exists():
-            print(f"No está el archivo {file_path}")
-            continue
-
-        with rasterio.open(file_path) as src:
-            # Leo la banda 1 y la aplano
-            band = src.read(1).flatten()
-            # Elimino nan, infinitos y nodata
-            mask = np.isfinite(band) & (band != src.nodata)
-            valid_data = band[mask]
-
-            # Hago un muestreo aleatorio si hay más de n_samples, sino uso todos los datos válidos
-            if len(valid_data) > n_samples:
-                sample = np.random.choice(valid_data, n_samples, replace=False)
-            else:
-                sample = valid_data
-
-            all_data.append(pd.DataFrame({"Valor": sample, "Índice": name}))
-
-    return pd.concat(all_data, ignore_index=True)
-
-
-ruta_indices = Path("salidas/indices")
+RUTA_SALIDA = RUTA_BASE / "01_compara_indices"
+# Se crea la carpeta de salida si no existe
+RUTA_SALIDA.mkdir(parents=True, exist_ok=True)
 
 mapeo_indices = {
     "2023-06-14 NDVI": "230614_ndvi.tif",
@@ -88,105 +67,154 @@ mapeo_indices = {
     "2025-05-23 MCARI2": "250523_mcari2.tif",
 }
 
-# Filtro el diccionario mapeo_indices por fecha e índice
-mapeo_indices_filtrado = {}
-for key, value in mapeo_indices.items():
-    partes = key.split()
-    fecha_str = partes[0]
-    indice_str = partes[-1] if len(partes) > 1 else None
-    
-    # Compruebo el filtro de índice
-    if INDICES_PERMITIDOS is not None and indice_str not in INDICES_PERMITIDOS:
+
+def load_indices_sample(ruta_base, indices_dict, n_samples=100000):
+    all_data = []
+
+    # Convierto el string a un objeto Path
+    directory = Path(ruta_base)
+
+    for name, filename in indices_dict.items():
+        file_path = directory / filename
+
+        if not file_path.exists():
+            print(f"No está el archivo {file_path}")
+            continue
+
+        with rasterio.open(file_path) as src:
+            # Leo la banda 1 y la aplano
+            band = src.read(1).flatten()
+            # Elimino nan, infinitos y nodata
+            mask = np.isfinite(band) & (band != src.nodata)
+            valid_data = band[mask]
+
+            # Hago un muestreo aleatorio si hay más de n_samples, sino uso todos los datos válidos
+            if len(valid_data) > n_samples:
+                sample = np.random.choice(valid_data, n_samples, replace=False)
+            else:
+                sample = valid_data
+
+            all_data.append(pd.DataFrame({"Valor": sample, "Índice": name}))
+
+    return pd.concat(all_data, ignore_index=True)
+
+
+for fecha in FECHAS:
+    print(f"\n--- Generando gráfico para la fecha: {fecha} ---")
+    FECHA_INICIO = fecha
+    FECHA_FIN = fecha
+
+    # Filtro el diccionario mapeo_indices por fecha e índice (sobre una copia nueva en cada iteración)
+    mapeo_indices_filtrado = {}
+    for key, value in mapeo_indices.items():
+        partes = key.split()
+        fecha_str = partes[0]
+        indice_str = partes[-1] if len(partes) > 1 else None
+
+        # Compruebo el filtro de índice
+        if INDICES_PERMITIDOS is not None and indice_str not in INDICES_PERMITIDOS:
+            continue
+
+        try:
+            fecha_dt = datetime.strptime(fecha_str, "%Y-%m-%d").astimezone()
+            incluir = True
+            if FECHA_INICIO:
+                inicio_dt = datetime.strptime(FECHA_INICIO, "%Y-%m-%d").astimezone()
+                if fecha_dt < inicio_dt:
+                    incluir = False
+            if FECHA_FIN:
+                fin_dt = datetime.strptime(FECHA_FIN, "%Y-%m-%d").astimezone()
+                if fecha_dt > fin_dt:
+                    incluir = False
+
+            if incluir:
+                mapeo_indices_filtrado[key] = value
+        except ValueError:
+            # Si no se puede parsear la fecha, lo incluyo por defecto
+            mapeo_indices_filtrado[key] = value
+
+    if not mapeo_indices_filtrado:
+        print(
+            f"Advertencia: No hay índices que cumplan con los filtros para la fecha {fecha}. Saltando..."
+        )
         continue
 
-    try:
-        fecha_dt = datetime.strptime(fecha_str, "%Y-%m-%d").astimezone()
-        incluir = True
-        if FECHA_INICIO:
-            inicio_dt = datetime.strptime(FECHA_INICIO, "%Y-%m-%d").astimezone()
-            if fecha_dt < inicio_dt:
-                incluir = False
-        if FECHA_FIN:
-            fin_dt = datetime.strptime(FECHA_FIN, "%Y-%m-%d").astimezone()
-            if fecha_dt > fin_dt:
-                incluir = False
-                
-        if incluir:
-            mapeo_indices_filtrado[key] = value
-    except ValueError:
-        # Si no se puede parsear la fecha, lo incluyo por defecto
-        mapeo_indices_filtrado[key] = value
+    # Cargo los datos usando ÚNICAMENTE el diccionario filtrado
+    df = load_indices_sample(RUTA_INDICES, mapeo_indices_filtrado)
 
-mapeo_indices = mapeo_indices_filtrado
+    # Extraigo el tipo de índice (última palabra) para usarlo en la coloración
+    df["Tipo"] = df["Índice"].apply(lambda x: x.split()[-1])
 
-if not mapeo_indices:
-    raise ValueError("No hay índices que cumplan con los filtros de fecha especificados.")
+    # RIDGE PLOT
+    sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
 
-# Cargo los datos
-df = load_indices_sample(ruta_indices, mapeo_indices)
+    # Cuadrícula de subplots (uno por índice)
+    g = sns.FacetGrid(
+        df, row="Índice", hue="Tipo", aspect=9, height=1.2, palette="viridis"
+    )
 
-# Extraigo el tipo de índice (última palabra) para usarlo en la coloración
-# Ejemplo: "2023-06-14 NDVI" -> "NDVI"
-df["Tipo"] = df["Índice"].apply(lambda x: x.split()[-1])
+    # Dibujo las densidades (KDE)
+    g.map(
+        sns.kdeplot,
+        "Valor",
+        bw_adjust=0.5,
+        clip_on=False,
+        fill=True,
+        alpha=1,
+        linewidth=1.5,
+    )
+    g.map(sns.kdeplot, "Valor", clip_on=False, color="w", lw=2, bw_adjust=0.5)
 
-# RIDGE PLOT
-sns.set_theme(style="white", rc={"axes.facecolor": (0, 0, 0, 0)})
+    # Línea base para cada gráfico
+    g.map(plt.axhline, y=0, lw=2, clip_on=False)
 
-# Cuadrícula de subplots (uno por índice)
-# Uso hue="Tipo" para que cada índice tenga un color distinto
-g = sns.FacetGrid(df, row="Índice", hue="Tipo", aspect=9, height=1.2, palette="viridis")
+    # Etiquetas
+    def label(x, color, label):
+        ax = plt.gca()
+        # Cojo el título del subplot
+        title = ax.get_title()
+        # Me quedo solo con la parte derecha del nombre del índice si existe
+        if " = " in title:
+            row_text = title.split(" = ")[-1]
+        else:
+            row_text = title
 
-# Dibujo las densidades (KDE)
-g.map(sns.kdeplot, "Valor", bw_adjust=.5, clip_on=False, fill=True, alpha=1, linewidth=1.5)
-g.map(sns.kdeplot, "Valor", clip_on=False, color="w", lw=2, bw_adjust=.5)
+        ax.text(
+            0,
+            0.2,
+            row_text,
+            fontweight="bold",
+            color=color,
+            ha="left",
+            va="center",
+            transform=ax.transAxes,
+        )
 
-# Línea base para cada gráfico
-g.map(plt.axhline, y=0, lw=2, clip_on=False)
+    g.map(label, "Valor")
 
+    # Ajustes visuales para histogramas apilados
+    g.figure.subplots_adjust(hspace=-0.25)
+    g.set_titles("")
+    g.set(yticks=[], ylabel="")
+    g.despine(bottom=True, left=True)
 
-# Etiquetas
-def label(x, color, label):
-    ax = plt.gca()
-    # Cojo el título del subplot (Índice = 2023-06-14 NDVI, por ejemplo)
-    title = ax.get_title()
-    # Me quedo solo con la parte derecha del nombre del índice si existe
-    if " = " in title:
-        row_text = title.split(" = ")[-1]
+    plt.xlabel("Valor del Índice")
+    plt.suptitle(f"Comparativa de índices - {fecha}", fontsize=16)
+
+    # Guardado del gráfico
+    if len(INDICES_PERMITIDOS) == 1:
+        # Mejora: Utiliza automáticamente el nombre del único índice permitido
+        output_filename = f"comparacion_indices_{fecha}_tvi2.png"
     else:
-        row_text = title
-        
-    ax.text(0, .2, row_text, fontweight="bold", color=color,
-            ha="left", va="center", transform=ax.transAxes)
+        output_filename = f"comparacion_indices_{fecha}_resto.png"
 
+    archivo_salida = RUTA_SALIDA / output_filename
 
-g.map(label, "Valor")
+    # Se guarda
+    plt.savefig(archivo_salida, dpi=300, bbox_inches="tight")
+    print(f"Gráfico guardado con éxito en: {archivo_salida}")
 
-# Esto es para que parezcan histogramas apilados
-g.figure.subplots_adjust(hspace=-.25)
-g.set_titles("")
-g.set(yticks=[], ylabel="")
-g.despine(bottom=True, left=True)
-
-plt.xlabel("Valor del Índice")
-plt.suptitle("Comparativa de índices", fontsize=16)
-
-# Guardado del gráfico
-if mapeo_indices:
-    # Uso la primera fecha que ha encontrado para el nombre del archivo
-    first_key = next(iter(mapeo_indices.keys()))
-    date_str = first_key.split(' ')[0]
-    # output_filename = f"comparacion_indices_{date_str}.png"
-    output_filename = "comparacion_indices_230614.png"
-    output_path = ruta_indices / "histogramas" / output_filename
-    
-    # Se crea carpeta si no existe
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Se guarda antes de show()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    print(f"Gráfico guardado en: {output_path}")
-
-# Muestro el gráfico
-plt.show()
+    # Limpieza de memoria y figura para la siguiente iteración
+    plt.close("all")
 
 print(f"\nTiempo de procesado total: {datetime.now().astimezone() - hora_inicio}")

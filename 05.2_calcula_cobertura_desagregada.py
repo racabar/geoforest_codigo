@@ -1,3 +1,14 @@
+"""
+Script para calcular y validar la cobertura vegetal consolidando la serie temporal
+completa de vuelos y cuadrantes en un único flujo de trabajo.
+
+Cruza la superficie de vegetación extraída de los rásteres con los inventarios de campo
+y genera un gráfico comparativo global unificado.
+
+Módulos internos utilizados:
+  - modulos.validacion_campo (genera_graficos)
+"""
+
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -120,7 +131,7 @@ def procesar_serie_temporal(
         for ruta in archivos_tif:
             try:
                 fecha_str = ruta.stem.split("_")[0]
-                fecha_archivo = datetime.strptime(fecha_str, "%Y%m%d").date()  # noqa: DTZ007
+                fecha_archivo = datetime.strptime(fecha_str, "%Y%m%d").date()
 
                 if fecha_inicio_date and fecha_archivo < fecha_inicio_date:
                     continue
@@ -189,11 +200,11 @@ if __name__ == "__main__":
     DATOS_BD = "02_rec_total_desn_mant_quadrat"
     TIPO_OTSU = "otsu_2c"
 
-    RUTA_SALIDAS = Path("salidas")
     RUTA_ENTRADAS = Path("entradas")
+    RUTA_SALIDAS = Path("salidas/sin_sombras")
 
     ruta_clasificaciones = (
-        RUTA_SALIDAS / "segmentaciones" / f"clasificaciones_{TIPO_OTSU}" / INDICE
+        RUTA_SALIDAS / "03_segmentaciones" / f"{INDICE}_clases_{TIPO_OTSU}"
     )
     ruta_parcelas = RUTA_ENTRADAS / "infoVectorial.gpkg"
 
@@ -209,14 +220,7 @@ if __name__ == "__main__":
         raise ValueError(f"Opciones válidas: {list(datos_campo.keys())}")
 
     ruta_datos_campo = RUTA_ENTRADAS / "cobertura_campo" / DATOS_BD
-    ruta_graficos = (
-        RUTA_SALIDAS
-        / "graficos_cobertura"
-        / "00_sin_tratamiento"
-        / DATOS_BD
-        / INDICE
-        / TIPO_OTSU
-    )
+    ruta_graficos = RUTA_SALIDAS / "04_graficos_cobertura" / f"00_sin_tratamiento_{DATOS_BD}_{INDICE}_{TIPO_OTSU}"
     columna_cobertura_campo = datos_campo[DATOS_BD]
 
     try:

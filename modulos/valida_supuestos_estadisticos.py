@@ -3,6 +3,7 @@ Módulo para evaluar y graficar los supuestos estadísticos de un modelo OLS
 (Normalidad de Shapiro-Wilk, Homocedasticidad de Breusch-Pagan e Independencia de Durbin-Watson).
 """
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import statsmodels.api as sm
 import statsmodels.stats.diagnostic as smd
 from scipy import stats
@@ -83,6 +84,20 @@ def graficar_diagnosticos(modelo, ruta_salida=None, mostrar_figura=False):
     ax[1].set_ylabel("Residuos", fontsize=14)
     ax[1].set_title("Residuos vs. Predichos\n(Evaluación de homocedasticidad)", fontsize=16, pad=15)
     ax[1].grid(True, linestyle='--', alpha=0.6)
+
+    # Configuración de los valores en el eje X:
+    # 1. MaxNLocator(integer=True) restringe las divisiones mayores para que únicamente
+    #    se ubiquen en números enteros (5, 6, 7...), evitando divisiones intermedias con decimales.
+    # 2. set_major_formatter('{x:.0f}') garantiza que las etiquetas se impriman sin decimales (sin '.0').
+    ax[1].xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax[1].xaxis.set_major_formatter('{x:.0f}')
+
+    # Configuración de los valores en el eje Y (Residuos):
+    # 1. MaxNLocator(integer=True) restringe las divisiones mayores a números enteros (-2, -1, 0, 1, 2...),
+    #    evitando divisiones intermedias con decimales.
+    # 2. set_major_formatter('{x:.0f}') garantiza que las etiquetas se impriman sin formato decimal (sin '.0').
+    ax[1].yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax[1].yaxis.set_major_formatter('{x:.0f}')
 
     plt.tight_layout()
 

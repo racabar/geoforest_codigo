@@ -1,3 +1,10 @@
+"""
+Script para analizar la redundancia espectral y multicolinealidad entre múltiples
+índices de vegetación mediante matrices de correlación de Pearson y mapas de calor (heatmaps).
+
+Exporta las matrices estadísticas en formato CSV y los gráficos correspondientes en PNG.
+"""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -41,19 +48,22 @@ def crea_stack_indices(diccionario_indices):
 
 
 if __name__ == "__main__":
-    ruta_base = Path(Path(__file__).resolve().parent)
-    ruta_indices = ruta_base / "salidas" / "indices"
+    RUTA_BASE = Path("salidas/sin_sombras")
+    RUTA_INDICES = RUTA_BASE / "00_indices"
+
+    RUTA_SALIDA = RUTA_BASE / "02_matrices_correlacion"
+    RUTA_SALIDA.mkdir(parents=True, exist_ok=True)
 
     FECHAS = ["240516", "250123", "250523"]
 
     for fecha in FECHAS:
         indices = {
-            "ndvi": ruta_indices / f"{fecha}_ndvi.tif",
-            "ndre": ruta_indices / f"{fecha}_ndre.tif",
-            "osavi": ruta_indices / f"{fecha}_osavi.tif",
-            "msavi": ruta_indices / f"{fecha}_msavi.tif",
-            "mcari2": ruta_indices / f"{fecha}_mcari2.tif",
-            "tvi2": ruta_indices / f"{fecha}_tvi2.tif",
+            "ndvi":   RUTA_INDICES / f"{fecha}_ndvi.tif",
+            "ndre":   RUTA_INDICES / f"{fecha}_ndre.tif",
+            "osavi":  RUTA_INDICES / f"{fecha}_osavi.tif",
+            "msavi":  RUTA_INDICES / f"{fecha}_msavi.tif",
+            "mcari2": RUTA_INDICES / f"{fecha}_mcari2.tif",
+            "tvi2":   RUTA_INDICES / f"{fecha}_tvi2.tif",
         }
 
         valor_nodata = -9999.0
@@ -86,12 +96,7 @@ if __name__ == "__main__":
         df_corr = pd.DataFrame(X_muestra_corr, columns=nombres_indices)
         matriz_corr = df_corr.corr().round(3)  # Pearson por defecto
 
-        matriz_corr.to_csv(
-            ruta_indices
-            / "matrices_correlacion"
-            / f"20{fecha}_matriz_correlacion_indices.csv",
-            index=False,
-        )
+        matriz_corr.to_csv(RUTA_SALIDA / f"20{fecha}_matriz_correlacion_indices.csv", index=False)
 
         print("Matriz de correlación de Pearson (Valores > 0.90 indican alta redundancia):")
         print(matriz_corr.to_string())
@@ -133,11 +138,8 @@ if __name__ == "__main__":
         plt.tight_layout()
 
         # Guardo el gráfico como imagen en el mismo directorio de salidas
-        imagen_salida = (
-            ruta_indices
-            / "matrices_correlacion"
-            / f"20{fecha}_matriz_correlacion_indices.png"
-        )
+        imagen_salida = (RUTA_SALIDA/ f"20{fecha}_matriz_correlacion_indices.png")
+
         plt.savefig(imagen_salida, dpi=300)
         print(f"\nGráfica de correlación guardada en: {imagen_salida}")
 

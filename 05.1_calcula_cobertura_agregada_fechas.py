@@ -1,3 +1,13 @@
+"""
+Script para calcular y validar la fracción de cobertura vegetal del UAV frente a
+datos de inventario de campo por quadrat/parcela para un índice y segmentación Otsu específicos.
+
+Genera métricas de validación y figuras comparativas de cobertura observada vs. calculada.
+
+Módulos internos utilizados:
+  - modulos.validacion_campo (procesar_serie_temporal_generico, genera_graficos)
+"""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -5,7 +15,7 @@ import matplotlib.pyplot as plt
 from modulos.validacion_campo import genera_graficos, procesar_serie_temporal_generico
 
 if __name__ == "__main__":
-    FECHA_INICIO = "2024-04-01"  # "AAAA-MM-DD"
+    FECHA_INICIO = "2024-05-01"  # "AAAA-MM-DD"
     FECHA_FIN = None
     INDICE = "ndvi"
     DATOS_BD = "02_rec_total_desn_mant_quadrat"
@@ -15,7 +25,7 @@ if __name__ == "__main__":
 
     # Definición de directorios raíz
     RUTA_ENTRADAS = Path("entradas")
-    RUTA_SALIDAS = Path("salidas")
+    RUTA_SALIDAS = Path("salidas/sin_sombras")
 
     # Validaciones de parámetros
     indices_validos = {"ndvi", "tvi2"}
@@ -33,12 +43,13 @@ if __name__ == "__main__":
     columna_cobertura_campo = datos_campo_validos[DATOS_BD]
 
     # Rutas específicas de entrada
-    ruta_clasificaciones = RUTA_SALIDAS / "segmentaciones" / f"clasificaciones_{TIPO_OTSU}" / INDICE
+    ruta_clasificaciones = RUTA_SALIDAS / "03_segmentaciones" / "ndvi_clases_otsu_2c"
     ruta_datos_campo = RUTA_ENTRADAS / "cobertura_campo" / DATOS_BD
     ruta_parcelas = RUTA_ENTRADAS / "infoVectorial.gpkg"
 
     # Rutas específicas de salida
-    ruta_graficos = RUTA_SALIDAS / "graficos_cobertura" / "00_sin_tratamiento" / DATOS_BD / INDICE / TIPO_OTSU
+    ruta_graficos = RUTA_SALIDAS / "04_graficos_cobertura" / f"00_sin_tratamiento_{DATOS_BD}_{INDICE}_{TIPO_OTSU}"
+    ruta_graficos.mkdir(parents=True, exist_ok=True)
 
     # VALIDACIÓN CON DATOS DE CAMPO
     try:
